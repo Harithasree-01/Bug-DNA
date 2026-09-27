@@ -1,88 +1,63 @@
-# 🧬 BUG DNA
+# BUG DNA
 
-**Every bug leaves a genetic trace.**
-
-A hackathon prototype for the **IBM Bob 2.0 Hackathon**. BUG DNA is a developer-forensics tool
-for debugging and regression testing: instead of only fixing the bug in front of you, it
-reconstructs the bug's "DNA" from your stack trace, code path, Git history, previous issues,
-previous fixes, tests, and documentation — then tells you whether this bug has a family history,
-and whether the old fix actually covers the new incident.
-
-> Traditional debugging asks: *how do I fix this bug?*
-> BUG DNA asks: *where have we seen this bug's DNA before, and what did we miss last time?*
-
----
+BUG DNA is an AI-assisted debugging prototype for the IBM Bob 2.0 Hackathon. It helps developers investigate whether a new bug is a mutation of a historical failure instead of simply fixing the current symptom.
 
 ## 1. Problem
 
-Developers usually fix bugs by reading the current stack trace and the surrounding source. But
-similar bugs often already exist somewhere in the project's history — an old issue, an old fix, a
-related test, a documentation claim that no longer matches the code. Skipping that history causes:
-
-- duplicated debugging effort
-- repeated bugs
-- incomplete fixes that patch one path but miss a sibling path
-- missed related code paths
-- unnecessary rework
-- weak regression coverage
+Teams often fix bugs in isolation. A broken refund path, a missing null guard, or a discount edge case can appear again in a different code path and be fixed twice without learning from the earlier fix. The cost is duplicated investigation, weak regression tests, and silent system risk.
 
 ## 2. Solution
 
-BUG DNA treats a bug report the way a forensics lab treats evidence. It extracts a "DNA profile"
-from the report (error type, affected module, mutation, trigger, code path), runs a set of
-investigator agents in parallel over the project's history, finds the closest historical match,
-and — critically — highlights **how the current bug differs** from its ancestor. That difference
-is usually exactly what the old fix didn't cover.
+BUG DNA converts a bug report into a forensic profile: error family, module, stack trace, trigger, and mutation pattern. It compares the current incident with historical issues, checks prior fixes, validates code paths, and highlights whether the old fix actually covered the new path.
 
-## 3. How BUG DNA works
+## 3. Why historical debugging matters
 
-1. **Report** — the developer submits a bug (title, description, stack trace, repo, file).
-2. **DNA extraction** — the report is distilled into an error type, module, mutation, trigger and
-   code path.
-3. **The Investigation Room** — five agents run in parallel: Historian (Git history), DNA Matcher
-   (similar bugs), Code Forensics (affected functions), Test Detective (coverage gaps), and
-   Document Analyst (docs vs. behavior).
-4. **DNA match** — the closest historical incident is shown, with matched signals and — just as
-   important — the *differences* from the current bug.
-5. **The mutation** — the historical fix's covered path and the current bug's new,
-   unprotected path are shown as two related strands.
-6. **Impact map** — a dependency chain shows which functions are downstream of the fix, plus a
-   documentation-vs-behavior discrepancy the investigation surfaced along the way.
-7. **Regression tests** — tests are generated for the scenarios the old fix and old tests missed.
-8. **Fix proposal** — root cause plus a concise before/after diff.
-9. **AI code review** — correctness, regression risk, test coverage, maintainability and security,
-   each with a verdict and a note.
-10. **Case closed** — a final forensic report summarizing the investigation, exportable as a file.
+The key insight is that bugs are often not unique. They repeat with a different execution path. A prior fix can cover checkout refunds and still miss subscription refunds, creating the exact regression pattern this tool is built to expose.
 
-## 4. Developer workflow improved
+## 4. BUG DNA workflow
 
-**Debugging + regression testing.** BUG DNA shortens the loop between "a bug was reported" and "a
-verified, regression-safe fix exists" by front-loading the historical research a developer would
-otherwise do manually (or skip).
+1. Report the current incident
+2. Extract the bug signature from stack trace and code path
+3. Hunt historical issue matches and commit ancestry
+4. Detect mutation between old and new execution paths
+5. Generate missing regression tests
+6. Propose a root-cause fix
+7. Run a final review and verification
+8. Close the case with a forensic summary
 
-## 5. Multi-agent architecture
+## 5. Agent architecture
 
-The Investigation Room models five specialized agents running concurrently, each with its own
-status machine (`idle → analyzing → found evidence → complete`), progress, and evidence list. In
-this prototype the agents run against seeded local data on a timer to demonstrate the concurrency
-model; see [`docs/architecture.md`](docs/architecture.md) for how each agent's `services/` module
-is structured so a real integration (GitHub API, git log, an LLM call) can be dropped in later
-without changing the UI.
+The investigation room models several specialized agents:
 
-## 6. Demo flow
+- HISTORIAN: scans previous incidents and relevant commits
+- CODE FORENSICS: traces impacted functions and mutation paths
+- TEST DETECTIVE: checks existing coverage and identifies missing scenarios
+- DOCUMENT ANALYST: compares docs and implementation
+- DNA CORRELATOR: ties the evidence together and scores similarity
+- ROOT CAUSE ANALYST: determines the actual failure and historical coverage gap
+- VERIFICATION AGENT: checks the fix, tests, and readiness
 
-The included demo case is **BUG-217** on a fictional payment-processing project, **PayFlow**.
-BUG-217 looks like a known incident, **BUG-184**, which was already fixed — but the old fix only
-covered the standard checkout path, and BUG-217 travels through a newer subscription-refund path
-that bypasses it. See [`docs/demo-script.md`](docs/demo-script.md) for the full walkthrough.
+This prototype uses deterministic local demo data so it works without external services. The data and agent logic are separated so GitHub, Git, and LLM connectors can be introduced later.
 
-## 7. Technology used
+## 6. Demo data
 
-- React 18 + TypeScript
+The default demo is built around a fictional repository called PayFlow. The case tells one coherent story:
+
+- Current report: BUG-217
+- Historical ancestor: BUG-184
+- Similarity signal: 87% based on shared error type, module, stack path, and null propagation
+- Mutation: the historical fix covered checkout but not subscription refund
+
+The demo data lives in src/data/payflow.ts and includes seeded bug history, commits, tests, and evidence.
+
+## 7. Technology stack
+
+- React
+- TypeScript
 - Vite
 - Tailwind CSS
-- lucide-react icons
-- No backend, no external APIs, no auth — all data is seeded locally in `src/data/payflow.ts`
+- Lucide React
+- Framer Motion is not required for the first demo but can be added later if needed
 
 ## 8. How to run
 
@@ -91,36 +66,30 @@ npm install
 npm run dev
 ```
 
-Then open the printed local URL. Click **Load demo case — BUG-217** on the landing page for the
-fastest path through the full investigation, or **Start an investigation** to fill out a bug
-report yourself (the demo always resolves against the seeded PayFlow project).
+Then open the local Vite URL in the browser.
+
+For a full production build:
 
 ```bash
-npm run build    # type-check and produce a production build
-npm run preview  # preview the production build locally
+npm run build
+npm run preview
 ```
 
-## 9. Future integrations
+## 9. Future GitHub, Git, and LLM integrations
 
-This prototype is intentionally structured so the following can be added without reworking the
-UI:
+This prototype is intentionally built for demo-only local data. The code is structured for future connectors:
 
-- **GitHub / Git integration** — replace the seeded commit history in `src/data/payflow.ts` with
-  real `git log` output or the GitHub API, behind a `services/git.ts` module.
-- **Issue tracker integration** — pull previous issues from GitHub Issues, Jira or Linear instead
-  of the seeded `HistoricalMatch` data.
-- **LLM-backed matching** — replace the deterministic similarity score with an embedding-based or
-  LLM-scored comparison across stack traces, diffs and issue text.
-- **Real regression test execution** — wire "Add to test suite" to actually write a test file and
-  run it in CI.
-- **Multi-project support** — the current demo is scoped to one seeded repository; the data layer
-  is already shaped to support more than one `CaseFile`.
+- GitHub API for issue and PR matching
+- git log or repository analysis for ancestry and evolution
+- LLM-assisted summarization and bug similarity analysis
+- CI-based test execution and report export
 
----
+No external API calls are required for the demo, and no false claims are made about real live repository queries.
 
-### Demo-data disclaimer
+## 10. Files to inspect
 
-Everything under **Historical Hunt**, **DNA Match**, **Impact Map**, and the generated tests is
-seeded demo data for the fictional "PayFlow" project, computed locally with no external services.
-Similarity percentages are labeled as *"similarity based on this demo's matching signals,"* not a
-scientific or statistical claim.
+- src/App.tsx — main dashboard and investigation flow
+- src/data/payflow.ts — demo repository evidence and case data
+- src/types/index.ts — type contracts for the project
+- docs/architecture.md — architecture notes and ASCII layout
+- docs/demo-script.md — presentation walkthrough
